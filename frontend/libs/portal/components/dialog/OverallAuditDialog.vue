@@ -31,14 +31,12 @@ const form = ref<VForm | null>(null);
 
 const currentProject = computed(() => projectStore.currentProject!);
 const channelSpdxs = computed(() => sbomStore.channelSpdxs);
-const selectedSpdx = computed(() => sbomStore.selectedSpdx);
-
 const rules = {
   comment: minMax(t('ATTR_COMMENT'), 0, 500, false),
 };
 
 const open = () => {
-  selectedSBOM.value = selectedSpdx.value;
+  selectedSBOM.value = sbomStore.getSelectedSBOM;
   comment.value = t('AUDIT_ATTR_COMMENT');
   isVisible.value = true;
 };
@@ -76,7 +74,6 @@ const save = async () => {
     }
     await versionService.createOverallReview(currentProject.value._key, sbomStore.currentVersion._key, req);
     await projectStore.fetchProjectByKey(currentProject.value._key);
-    sbomStore.resetCurrentVersion();
     emit('reload');
     close();
     snack(t('DIALOG_overallreview_create_success'));
@@ -132,7 +129,12 @@ defineExpose({open});
             :label="t('SBOM_DELIVERIES')">
             <template v-slot:item="{item, props}">
               <v-list-item v-bind="props" title="">
-                <v-icon color="primary" v-if="currentProject.approvablespdx.spdxkey === item.raw._key" size="small" class="pr-2">mdi-star</v-icon>
+                <v-icon
+                  color="primary"
+                  v-if="currentProject.approvablespdx.spdxkey === item.raw._key"
+                  size="small"
+                  class="pr-2"
+                  icon="mdi-star"></v-icon>
                 <span class="d-subtitle-2">{{ formatDateAndTime(item.raw.Uploaded) }}</span>
                 <span class="d-text d-secondary-text"> - {{ item.raw.MetaInfo.Name }}</span>
                 <span class="d-text d-secondary-text ml-1" v-if="item.raw.Tag">({{ item.raw.Tag }})</span>
@@ -142,7 +144,12 @@ defineExpose({open});
             </template>
             <template v-slot:selection="{item}">
               <div class="d-inline">
-                <v-icon color="primary" v-if="currentProject.approvablespdx.spdxkey === item.raw._key" size="small" class="pr-2">mdi-star</v-icon>
+                <v-icon
+                  color="primary"
+                  v-if="currentProject.approvablespdx.spdxkey === item.raw._key"
+                  size="small"
+                  class="pr-2"
+                  icon="mdi-star"></v-icon>
                 <span class="d-subtitle-2">{{ formatDateAndTime(item.raw.Uploaded) }}</span>
                 <span class="d-text d-secondary-text"> - {{ item.raw.MetaInfo.Name }}</span>
                 <span class="d-text d-secondary-text ml-1" v-if="item.raw.Tag">({{ item.raw.Tag }})</span>

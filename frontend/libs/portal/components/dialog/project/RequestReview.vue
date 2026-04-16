@@ -97,8 +97,8 @@ const loadSBOMHist = async () => {
   if (!selectedChannel.value?._key) {
     return;
   }
-  const spdxFileHistory = (await versionService.getSbomHistory(projectModel.value._key, selectedChannel.value._key, 5))
-    .data;
+  const versionEntry = sbomStore.getAllSBOMs.find((v) => v.VersionKey === selectedChannel.value!._key);
+  const spdxFileHistory = (versionEntry?.SpdxFileHistory ?? []).slice(0, 5);
   if (spdxFileHistory[0]) {
     spdxFileHistory[0].isRecent = true;
   }
@@ -125,7 +125,7 @@ const autoSelect = async () => {
     return;
   }
 
-  if (Object.keys(sbomStore.selectedSpdx).length > 0 && !projectModel.value.isGroup) {
+  if (!!sbomStore.selectedSBOMKey && !projectModel.value.isGroup) {
     selectedChannel.value = sbomStore.currentVersion;
   } else {
     selectedChannel.value =
@@ -138,8 +138,8 @@ const autoSelect = async () => {
     }
     selectedSbom.value =
       sboms.value.find((a) => a._key === approvableInfo.value.projects[0].approvablespdx.spdxkey) ?? null;
-    if (Object.keys(sbomStore.selectedSpdx).length > 0) {
-      selectedSbom.value = sbomStore.selectedSpdx ?? null;
+    if (!!sbomStore.selectedSBOMKey) {
+      selectedSbom.value = sbomStore.getSelectedSBOM ?? null;
     }
     await loadStats();
   }

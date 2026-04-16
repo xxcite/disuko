@@ -7,7 +7,7 @@ import {ConfirmationType, IConfirmationDialogConfig} from '@disclosure-portal/co
 import {DialogVersionFormConfig} from '@disclosure-portal/components/dialog/DialogConfigs';
 import {usePageTitle} from '@disclosure-portal/composables/usePageTitle';
 import {ApprovableSPDXDto} from '@disclosure-portal/model/Project';
-import {SpdxFile, VersionSlim} from '@disclosure-portal/model/VersionDetails';
+import {SpdxFile} from '@disclosure-portal/model/VersionDetails';
 import projectService from '@disclosure-portal/services/projects';
 import versionService from '@disclosure-portal/services/version';
 import {useAppStore} from '@disclosure-portal/stores/app';
@@ -36,7 +36,7 @@ const {dashboardCrumbs, projectsCrumb, ...breadcrumbs} = useBreadcrumbsStore();
 const {useReactiveTitle} = usePageTitle();
 const {currentProject} = storeToRefs(projectStore);
 
-const {selectedSpdx, currentVersion, channelSpdxs} = storeToRefs(sbomStore);
+const {currentVersion, channelSpdxs} = storeToRefs(sbomStore);
 
 const reviewDia = ref(null);
 const confirmConfig = ref<IConfirmationDialogConfig>({} as IConfirmationDialogConfig);
@@ -45,7 +45,7 @@ const dataAreLoaded = ref(false);
 const selectedTab = ref('');
 const editDlg = ref(null);
 
-const currentSpdx = computed(() => selectedSpdx.value || spdxFileHistory.value[0]);
+const currentSpdx = computed(() => sbomStore.getSelectedSBOM || spdxFileHistory.value[0]);
 const currentProjectEmpty = computed(() => _.isEmpty(currentProject.value));
 const versionDetails = computed(() => currentVersion.value);
 const versionName = computed(() => currentVersion.value?.name || '');
@@ -110,20 +110,19 @@ const reload = async () => {
     await projectStore.fetchProjectByKey(projectId.value);
   }
   if (!versionDetails.value || versionDetails.value._key !== versionKey.value) {
-    const vd = currentProject.value?.versions[versionKey.value] ?? '';
-    sbomStore.setCurrentVersion(vd);
-    await sbomStore.fetchSBOMHistory();
+    sbomStore.setCurrentVersion(versionKey.value);
+    await sbomStore.fetchAllSBOMsFlat();
   }
   let selectedByRoute = false;
   if (spdxKey.value) {
     const sel = spdxFileHistory.value.find((spdx) => spdx._key === spdxKey.value);
     if (sel) {
-      sbomStore.setSelectedSpdx(sel);
+      sbomStore.setSelectedSBOMKey(sel._key);
       selectedByRoute = true;
     }
   }
   if (!selectedByRoute) {
-    sbomStore.setSelectedSpdx(spdxFileHistory.value[0] || null);
+    sbomStore.setSelectedSBOMKey(spdxFileHistory.value[0]?._key || '');
     await resetUrl();
   }
   if (route.name === 'VersionSubTap') {
@@ -295,26 +294,26 @@ watch(
 );
 
 onUnmounted(() => {
-  sbomStore.setCurrentVersion({} as VersionSlim);
-  sbomStore.setSelectedSpdx({} as SpdxFile);
+  sbomStore.setCurrentVersion('');
+  sbomStore.setSelectedSBOMKey('');
   appStore.unsetDummyDesignMode();
 });
 </script>
 
 <template>
-  <div v-if="currentProject" class="p-4 h-full" data-testid="projects-versions">
-    <div v-if="!currentProjectEmpty" class="d-flex flex-row align-center pb-3 ga-2 flex-wrap">
+  <div v-if="currentProject" class="h-full p-4" data-testid="projects-versions">
+    <div v-if="!currentProjectEmpty" class="d-flex align-center ga-2 flex-row flex-wrap pb-3">
       <div>
         <v-chip v-if="currentProject.isDummy" class="dummy-tag mr-2" label>DUMMY</v-chip>
         <span class="text-h5" style="display: inline-block">{{ t('PROJECT') }}</span>
-        <span class="text-h5 px-2 project-name" :title="currentProject.name">
+        <span class="text-h5 project-name px-2" :title="currentProject.name">
           <q>
             <span>{{ currentProject.name }}</span>
           </q>
         </span>
       </div>
       <v-spacer></v-spacer>
-      <div class="d-flex flex-row align-center">
+      <div class="d-flex align-center flex-row">
         <v-select
           v-if="spdxFileHistory.length > 0"
           :model-value="currentSpdx"
